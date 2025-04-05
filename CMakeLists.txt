@@ -9,23 +9,6 @@ if(APPLE)
     find_library(FOUNDATION_LIBRARY Foundation)
 endif()
 
-if(UNIX AND NOT APPLE)
-    # If Linux, add rt and pthread
-    set(rt_LIBRARIES rt)
-    set(pthread_LIBRARIES pthread)
-    ament_package(
-        LIBRARIES ${PROJECT_NAME}
-        INCLUDE_DIRS include
-        DEPENDS rt pthread
-    )
-else()
-    # Otherwise normal call
-    ament_package(
-        LIBRARIES ${PROJECT_NAME}
-        INCLUDE_DIRS include
-    )
-endif()
-
 ## Sources
 set(serial_SRCS
     src/serial.cc
@@ -79,3 +62,17 @@ install(FILES include/serial/serial.h include/serial/v8stdint.h
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
+
+if(UNIX AND NOT APPLE)
+    # If Linux, add rt and pthread
+    set(rt_LIBRARIES rt)
+    set(pthread_LIBRARIES pthread)
+    ament_export_libraries(${PROJECT_NAME})
+    ament_export_include_directories(include)
+    ament_export_dependencies(rt pthread)
+else()
+    # Otherwise normal call
+    ament_export_libraries(${PROJECT_NAME})
+    ament_export_include_directories(include)
+endif()
+ament_package()
