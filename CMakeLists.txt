@@ -1,36 +1,48 @@
 cmake_minimum_required(VERSION 3.8)
 project(serial)
 
-# Find ament_cmake
+# Find ament
 find_package(ament_cmake REQUIRED)
 
+# Apple-specific frameworks
 if(APPLE)
     find_library(IOKIT_LIBRARY IOKit)
     find_library(FOUNDATION_LIBRARY Foundation)
 endif()
 
-## Sources
+# Common sources
 set(serial_SRCS
     src/serial.cc
     include/serial/serial.h
     include/serial/v8stdint.h
 )
+
+# Platform-specific sources
 if(APPLE)
-    # If OSX
-    list(APPEND serial_SRCS src/impl/unix.cc)
-    list(APPEND serial_SRCS src/impl/list_ports/list_ports_osx.cc)
+    list(APPEND serial_SRCS
+        src/impl/unix.cc
+        src/impl/list_ports/list_ports_osx.cc
+    )
 elseif(UNIX)
-    # If unix
-    list(APPEND serial_SRCS src/impl/unix.cc)
-    list(APPEND serial_SRCS src/impl/list_ports/list_ports_linux.cc)
+    list(APPEND serial_SRCS
+        src/impl/unix.cc
+        src/impl/list_ports/list_ports_linux.cc
+    )
 else()
-    # If windows
-    list(APPEND serial_SRCS src/impl/win.cc)
-    list(APPEND serial_SRCS src/impl/list_ports/list_ports_win.cc)
+    list(APPEND serial_SRCS
+        src/impl/win.cc
+        src/impl/list_ports/list_ports_win.cc
+    )
 endif()
 
-## Add serial library
+# Define library
 add_library(${PROJECT_NAME} ${serial_SRCS})
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+# Link system libraries
 if(APPLE)
     target_link_libraries(${PROJECT_NAME} ${FOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
 elseif(UNIX)
@@ -39,40 +51,20 @@ else()
     target_link_libraries(${PROJECT_NAME} setupapi)
 endif()
 
-## Uncomment for example
+# Optionally build example
 add_executable(serial_example examples/serial_example.cc)
-add_dependencies(serial_example ${PROJECT_NAME})
 target_link_libraries(serial_example ${PROJECT_NAME})
 
-## Include headers
-include_directories(include)
-
-## Install executable
+# Install
 install(TARGETS ${PROJECT_NAME}
-    ARCHIVE DESTINATION lib/${PROJECT_NAME}
-    LIBRARY DESTINATION lib/${PROJECT_NAME}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
 )
 
-## Install headers
-install(FILES include/serial/serial.h include/serial/v8stdint.h
-  DESTINATION include/serial)
+install(DIRECTORY include/ DESTINATION include)
 
-## Tests
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
-
-if(UNIX AND NOT APPLE)
-    # If Linux, add rt and pthread
-    set(rt_LIBRARIES rt)
-    set(pthread_LIBRARIES pthread)
-    ament_export_libraries(${PROJECT_NAME})
-    ament_export_include_directories(include)
-    ament_export_dependencies(rt pthread)
-else()
-    # Otherwise normal call
-    ament_export_libraries(${PROJECT_NAME})
-    ament_export_include_directories(include)
-endif()
+# ament exports
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME})
 ament_package()
